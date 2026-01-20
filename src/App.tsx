@@ -51,6 +51,18 @@ const formatBytes = (bytes: number) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
+const formatExpiryLabel = (expiresAt: number) => {
+  const diffMs = expiresAt - Date.now();
+  if (diffMs <= 0) return 'Expired';
+  const minutes = Math.max(1, Math.floor(diffMs / 60000));
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins === 0 ? `${hours}h left` : `${hours}h ${mins}m left`;
+  }
+  return `${minutes}m left`;
+};
+
 const App = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [role, setRole] = useState<Role>(null);
@@ -72,6 +84,14 @@ const App = () => {
   const [receiverSession, setReceiverSession] = useState<ApiSessionRecord | null>(null);
   const [receiverError, setReceiverError] = useState<string | null>(null);
   const [receiverLoading, setReceiverLoading] = useState(false);
+
+  const receiverFiles = receiverSession?.files ?? [];
+  const receiverDeviceName = receiverSession?.deviceName ?? '';
+  const receiverExpiryLabel = receiverSession
+    ? formatExpiryLabel(receiverSession.expiresAt)
+    : '';
+  const receiverTotalBytes = receiverFiles.reduce((acc, file) => acc + (file.size ?? 0), 0);
+  const receiverNeedsPassword = receiverSession?.requiresPassword ?? false;
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
