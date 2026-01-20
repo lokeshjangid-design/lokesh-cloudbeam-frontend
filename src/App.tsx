@@ -23,7 +23,9 @@ import clsx from 'clsx';
 import {
   createSession,
   lookupSessionByPin,
+  uploadFiles,
   type SessionRecord as ApiSessionRecord,
+  type UploadResponse,
 } from './lib/api';
 
 const expiryOptions = [
@@ -74,6 +76,7 @@ const App = () => {
   const [dragActive, setDragActive] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null);
   const [receiverSession, setReceiverSession] = useState<ApiSessionRecord | null>(null);
   const [receiverError, setReceiverError] = useState<string | null>(null);
   const [receiverLoading, setReceiverLoading] = useState(false);
@@ -173,6 +176,7 @@ const App = () => {
     setGeneratedCode(null);
     setShareLink(null);
     setProgress(0);
+    setUploadResponse(null);
   };
 
   const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
@@ -185,25 +189,26 @@ const App = () => {
     if (!selectedFiles.length || creatingSession) return;
     setSessionError(null);
     setCreatingSession(true);
+    
     try {
-      const filesMeta = selectedFiles.map((file, index) => ({
-        id: `${file.name}-${file.lastModified}-${index}`,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      }));
-
+      // Step 1: Upload files
+      setSessionStatus('uploading');
+      const uploadResult = await uploadFiles(selectedFiles);
+      setUploadResponse(uploadResult);
+      
+      // Step 2: Create session with uploaded files
       const record = await createSession({
         deviceName,
         expirySeconds: expiry === 0 ? 3600 : expiry,
         password: passwordEnabled && password ? password : undefined,
-        files: filesMeta,
+        tempSessionId: uploadResult.tempSessionId,
       });
 
       setGeneratedCode(record.pin);
-      setSessionStatus('uploading');
+      setSessionStatus('ready');
     } catch (error) {
       setSessionError(error instanceof Error ? error.message : 'Failed to create session');
+      setSessionStatus('idle');
     } finally {
       setCreatingSession(false);
     }

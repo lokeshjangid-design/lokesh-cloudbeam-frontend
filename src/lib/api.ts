@@ -22,6 +22,11 @@ export type CreateSessionPayload = {
   deviceName: string;
   expirySeconds: number;
   password?: string;
+  tempSessionId: string;
+};
+
+export type UploadResponse = {
+  tempSessionId: string;
   files: SessionFileMeta[];
 };
 
@@ -36,6 +41,19 @@ async function handleJson<T>(response: Response): Promise<T> {
     throw new Error(message);
   }
   return (data as T) ?? ({} as T);
+}
+
+export async function uploadFiles(files: File[]): Promise<UploadResponse> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  return handleJson<UploadResponse>(response);
 }
 
 export async function createSession(payload: CreateSessionPayload): Promise<SessionRecord> {
