@@ -613,12 +613,19 @@ const App = () => {
                                 onClick={async () => {
                                   try {
                                     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
-                                    const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/${file.id}`;
+                                    // Encode session ID and file ID to handle special characters
+                                    const encodedSessionId = encodeURIComponent(receiverSession?.id || '');
+                                    const encodedFileId = encodeURIComponent(file.id);
+                                    const downloadUrl = `${apiUrl}/api/download/${encodedSessionId}/${encodedFileId}`;
+                                    
+                                    console.log('Download URL:', downloadUrl); // Debug log
                                     
                                     // Fetch the file as blob
                                     const response = await fetch(downloadUrl);
                                     if (!response.ok) {
-                                      throw new Error('Download failed');
+                                      const errorText = await response.text();
+                                      console.error('Download failed:', response.status, errorText);
+                                      throw new Error(`Download failed: ${response.status}`);
                                     }
                                     
                                     const blob = await response.blob();
@@ -656,12 +663,18 @@ const App = () => {
                         onClick={async () => {
                           try {
                             const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
-                            const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/all`;
+                            // Encode session ID to handle special characters
+                            const encodedSessionId = encodeURIComponent(receiverSession?.id || '');
+                            const downloadUrl = `${apiUrl}/api/download/${encodedSessionId}/all`;
+                            
+                            console.log('Download URL:', downloadUrl); // Debug log
                             
                             // Fetch the zip file as blob
                             const response = await fetch(downloadUrl);
                             if (!response.ok) {
-                              throw new Error('Download failed');
+                              const errorText = await response.text();
+                              console.error('Download failed:', response.status, errorText);
+                              throw new Error(`Download failed: ${response.status}`);
                             }
                             
                             const blob = await response.blob();
