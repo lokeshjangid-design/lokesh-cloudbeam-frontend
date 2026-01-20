@@ -477,6 +477,11 @@ const App = () => {
                     <input
                       key={index}
                       maxLength={1}
+                      ref={index < 5 ? (input) => {
+                        if (input && receiverCode.length === index) {
+                          setTimeout(() => input.focus(), 0);
+                        }
+                      } : null}
                       value={receiverCode[index] ?? ''}
                       onChange={(event: ChangeEvent<HTMLInputElement>) => {
                         const value = event.target.value.replace(/[^0-9]/g, '');
@@ -489,8 +494,16 @@ const App = () => {
                         setReceiverCode((prev) => {
                           const chars = prev.split('');
                           chars[index] = value;
-                          return chars.join('').padEnd(6, '');
+                          const newCode = chars.join('').padEnd(6, '');
+                          return newCode;
                         });
+                        // Auto-focus next input
+                        if (index < 5) {
+                          const nextInput = event.target.parentElement?.children[index + 1] as HTMLInputElement;
+                          if (nextInput) {
+                            setTimeout(() => nextInput.focus(), 0);
+                          }
+                        }
                       }}
                       className="h-12 w-12 rounded-2xl border border-white/10 bg-white/5 text-center text-lg font-semibold text-current outline-none"
                     />
