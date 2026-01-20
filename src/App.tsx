@@ -607,7 +607,8 @@ const App = () => {
                               <button 
                                 onClick={() => {
                                   // Create download URL for individual file
-                                  const downloadUrl = `${window.location.origin}/api/download/${receiverSession?.id}/${file.id}`;
+                                  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+                                  const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/${file.id}`;
                                   const link = document.createElement('a');
                                   link.href = downloadUrl;
                                   link.download = file.name;
@@ -631,7 +632,8 @@ const App = () => {
                       <button
                         onClick={() => {
                           // Download all files as zip
-                          const downloadUrl = `${window.location.origin}/api/download/${receiverSession?.id}/all`;
+                          const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+                          const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/all`;
                           const link = document.createElement('a');
                           link.href = downloadUrl;
                           link.download = `files-${receiverSession?.id || 'download'}.zip`;
