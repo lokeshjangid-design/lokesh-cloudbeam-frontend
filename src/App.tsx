@@ -94,6 +94,21 @@ const App = () => {
     document.body.dataset.theme = theme;
   }, [theme]);
 
+  // Handle URL parameters for QR code scanning
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pathSegments = window.location.pathname.split('/').filter(Boolean);
+    
+    // Check if URL is /receiver?pin=123456
+    if (pathSegments[0] === 'receiver') {
+      const pin = urlParams.get('pin');
+      if (pin && pin.length === 6) {
+        setRole('receiver');
+        setReceiverCode(pin);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (sessionStatus !== 'uploading') {
       window.clearInterval(progressTimerRef.current);
@@ -445,7 +460,7 @@ const App = () => {
                       <div className="flex justify-center">
                         <div className="rounded-2xl bg-white p-4">
                           <QRCode
-                            value={shareLink || window.location.origin + '/receiver?pin=' + generatedCode}
+                            value={`${window.location.origin}/receiver?pin=${generatedCode}`}
                             size={180}
                             level="M"
                           />
@@ -455,11 +470,11 @@ const App = () => {
                       <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs truncate flex-1">
-                            {shareLink || window.location.origin + '/receiver?pin=' + generatedCode}
+                            {`${window.location.origin}/receiver?pin=${generatedCode}`}
                           </span>
                           <button
                             onClick={(e) => {
-                            navigator.clipboard.writeText(shareLink || window.location.origin + '/receiver?pin=' + generatedCode);
+                            navigator.clipboard.writeText(`${window.location.origin}/receiver?pin=${generatedCode}`);
                             // Show copied feedback
                             const btn = e.currentTarget;
                             const originalHTML = btn.innerHTML;
