@@ -282,6 +282,9 @@ const App = () => {
             <h1 className="text-3xl font-semibold md:text-4xl">
               Share files securely across any network
             </h1>
+            <p className="text-sm text-slate-400 mt-2">
+              Created by Lokesh Jangid
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
