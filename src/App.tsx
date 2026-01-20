@@ -1,10 +1,13 @@
 import type { ChangeEvent, DragEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import QRCode from 'react-qr-code';
 import {
   ArrowLeft,
   Check,
   Clock3,
+  Copy,
+  Download,
   DownloadCloud,
   History,
   Lock,
@@ -430,13 +433,41 @@ const App = () => {
                   </div>
                   <div className="flex items-center justify-center gap-3 text-sm text-blue-100">
                     <QrCode className="h-5 w-5" />
-                    QR available once upload finishes
+                    QR code ready to scan
                   </div>
-                  {sessionStatus === 'ready' && shareLink && (
+                  {sessionStatus === 'ready' && (
                     <div className="space-y-3">
+                      <div className="flex justify-center">
+                        <div className="rounded-2xl bg-white p-4">
+                          <QRCode
+                            value={shareLink || window.location.origin + '/receiver?pin=' + generatedCode}
+                            size={180}
+                            level="M"
+                          />
+                        </div>
+                      </div>
                       <p className="text-sm text-blue-100">Or share this link</p>
-                      <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-xs">
-                        {shareLink}
+                      <div className="rounded-2xl border border-white/10 bg-white/10 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs truncate flex-1">
+                            {shareLink || window.location.origin + '/receiver?pin=' + generatedCode}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                            navigator.clipboard.writeText(shareLink || window.location.origin + '/receiver?pin=' + generatedCode);
+                            // Show copied feedback
+                            const btn = e.currentTarget;
+                            const originalHTML = btn.innerHTML;
+                            btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                            setTimeout(() => {
+                              btn.innerHTML = originalHTML;
+                            }, 2000);
+                          }}
+                            className="ml-2 p-1 hover:bg-white/10 rounded transition"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -573,7 +604,21 @@ const App = () => {
                                 <p className="font-medium">{file.name}</p>
                                 <p className="text-sm text-slate-400">{formatBytes(file.size ?? 0)}</p>
                               </div>
-                              <button className="text-sm text-blue-300">Download</button>
+                              <button 
+                                onClick={() => {
+                                  // Create download URL for individual file
+                                  const downloadUrl = `${window.location.origin}/api/download/${receiverSession?.id}/${file.id}`;
+                                  const link = document.createElement('a');
+                                  link.href = downloadUrl;
+                                  link.download = file.name;
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                }}
+                                className="text-sm text-blue-300 hover:text-blue-200 transition"
+                              >
+                                Download
+                              </button>
                             </li>
                           ))}
                         </ul>
@@ -584,10 +629,20 @@ const App = () => {
                       )}
 
                       <button
+                        onClick={() => {
+                          // Download all files as zip
+                          const downloadUrl = `${window.location.origin}/api/download/${receiverSession?.id}/all`;
+                          const link = document.createElement('a');
+                          link.href = downloadUrl;
+                          link.download = `files-${receiverSession?.id || 'download'}.zip`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
                         className={clsx(
                           'flex w-full items-center justify-center gap-3 rounded-2xl py-3 font-semibold transition',
                           receiverFiles.length
-                            ? 'bg-gradient-to-r from-emerald-500 to-lime-500 text-emerald-950'
+                            ? 'bg-gradient-to-r from-emerald-500 to-lime-500 text-emerald-950 hover:from-emerald-600 hover:to-lime-600'
                             : 'cursor-not-allowed border border-white/10 text-slate-400'
                         )}
                         disabled={!receiverFiles.length}
