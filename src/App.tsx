@@ -610,16 +610,34 @@ const App = () => {
                                 <p className="text-sm text-slate-400">{formatBytes(file.size ?? 0)}</p>
                               </div>
                               <button 
-                                onClick={() => {
-                                  // Create download URL for individual file
-                                  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
-                                  const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/${file.id}`;
-                                  const link = document.createElement('a');
-                                  link.href = downloadUrl;
-                                  link.download = file.name;
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  document.body.removeChild(link);
+                                onClick={async () => {
+                                  try {
+                                    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+                                    const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/${file.id}`;
+                                    
+                                    // Fetch the file as blob
+                                    const response = await fetch(downloadUrl);
+                                    if (!response.ok) {
+                                      throw new Error('Download failed');
+                                    }
+                                    
+                                    const blob = await response.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    
+                                    // Create download link
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = file.name;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    
+                                    // Clean up
+                                    window.URL.revokeObjectURL(url);
+                                  } catch (error) {
+                                    console.error('Download error:', error);
+                                    alert('Download failed. Please try again.');
+                                  }
                                 }}
                                 className="text-sm text-blue-300 hover:text-blue-200 transition"
                               >
@@ -635,16 +653,34 @@ const App = () => {
                       )}
 
                       <button
-                        onClick={() => {
-                          // Download all files as zip
-                          const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
-                          const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/all`;
-                          const link = document.createElement('a');
-                          link.href = downloadUrl;
-                          link.download = `files-${receiverSession?.id || 'download'}.zip`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
+                        onClick={async () => {
+                          try {
+                            const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787';
+                            const downloadUrl = `${apiUrl}/api/download/${receiverSession?.id}/all`;
+                            
+                            // Fetch the zip file as blob
+                            const response = await fetch(downloadUrl);
+                            if (!response.ok) {
+                              throw new Error('Download failed');
+                            }
+                            
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            
+                            // Create download link
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `files-${receiverSession?.id || 'download'}.zip`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            
+                            // Clean up
+                            window.URL.revokeObjectURL(url);
+                          } catch (error) {
+                            console.error('Download error:', error);
+                            alert('Download failed. Please try again.');
+                          }
                         }}
                         className={clsx(
                           'flex w-full items-center justify-center gap-3 rounded-2xl py-3 font-semibold transition',
