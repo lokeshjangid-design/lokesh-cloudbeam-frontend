@@ -33,16 +33,6 @@ type Role = 'sender' | 'receiver' | null;
 
 type SessionStatus = 'idle' | 'uploading' | 'ready';
 
-const sampleReceiverManifest = {
-  senderDevice: 'MacBook Pro',
-  expiresIn: '9m left',
-  files: [
-    { id: 'doc', name: 'Brand Guidelines.pdf', size: 12_450_332 },
-    { id: 'photos', name: 'Launch Photos.zip', size: 187_904_819 },
-    { id: 'video', name: 'Demo.mov', size: 640_120_402 },
-  ],
-};
-
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return '0 B';
   const k = 1024;
@@ -533,73 +523,91 @@ const App = () => {
 
             <div className="space-y-6">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Sender device</p>
-                    <p className="text-2xl font-semibold">{sampleReceiverManifest.senderDevice}</p>
-                  </div>
-                  <ArrowLeft className="h-10 w-10 text-slate-500" />
-                </div>
-
-                {downloadReady ? (
-                  <div className="mt-6 space-y-4">
-                    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+                {receiverSession ? (
+                  <>
+                    <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-slate-400">Files ready</p>
-                        <p className="text-lg font-semibold">
-                          {sampleReceiverManifest.files.length} items ·{' '}
-                          {formatBytes(
-                            sampleReceiverManifest.files.reduce(
-                              (acc, file) => acc + file.size,
-                              0
-                            )
-                          )}
+                        <p className="text-sm text-slate-400">Sender device</p>
+                        <p className="text-2xl font-semibold">
+                          {receiverDeviceName || 'Unknown device'}
                         </p>
                       </div>
-                      <span className="text-xs uppercase tracking-[0.3em] text-emerald-300">
-                        {sampleReceiverManifest.expiresIn}
-                      </span>
+                      <ArrowLeft className="h-10 w-10 text-slate-500" />
                     </div>
 
-                    {passwordEnabled && (
-                      <input
-                        type="password"
-                        placeholder="Enter password"
-                        value={receiverPassword}
-                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                          setReceiverPassword(event.target.value)
-                        }
-                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none"
-                      />
-                    )}
+                    <div className="mt-6 space-y-4">
+                      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div>
+                          <p className="text-sm text-slate-400">Files ready</p>
+                          <p className="text-lg font-semibold">
+                            {receiverFiles.length} items · {formatBytes(receiverTotalBytes)}
+                          </p>
+                        </div>
+                        {receiverExpiryLabel && (
+                          <span className="text-xs uppercase tracking-[0.3em] text-emerald-300">
+                            {receiverExpiryLabel}
+                          </span>
+                        )}
+                      </div>
 
-                    <ul className="space-y-3">
-                      {sampleReceiverManifest.files.map((file) => (
-                        <li
-                          key={file.id}
-                          className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-                        >
-                          <div>
-                            <p className="font-medium">{file.name}</p>
-                            <p className="text-sm text-slate-400">{formatBytes(file.size)}</p>
-                          </div>
-                          <button className="text-sm text-blue-300">Download</button>
-                        </li>
-                      ))}
-                    </ul>
+                      {receiverNeedsPassword && (
+                        <input
+                          type="password"
+                          placeholder="Enter password"
+                          value={receiverPassword}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            setReceiverPassword(event.target.value)
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none"
+                        />
+                      )}
 
-                    <button className="flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-lime-500 py-3 font-semibold text-emerald-950">
-                      <DownloadCloud className="h-5 w-5" />
-                      Download everything
-                    </button>
-                  </div>
+                      {receiverFiles.length > 0 ? (
+                        <ul className="space-y-3">
+                          {receiverFiles.map((file) => (
+                            <li
+                              key={file.id}
+                              className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                            >
+                              <div>
+                                <p className="font-medium">{file.name}</p>
+                                <p className="text-sm text-slate-400">{formatBytes(file.size ?? 0)}</p>
+                              </div>
+                              <button className="text-sm text-blue-300">Download</button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-center text-sm text-slate-400">
+                          Sender hasn't attached any files yet.
+                        </div>
+                      )}
+
+                      <button
+                        className={clsx(
+                          'flex w-full items-center justify-center gap-3 rounded-2xl py-3 font-semibold transition',
+                          receiverFiles.length
+                            ? 'bg-gradient-to-r from-emerald-500 to-lime-500 text-emerald-950'
+                            : 'cursor-not-allowed border border-white/10 text-slate-400'
+                        )}
+                        disabled={!receiverFiles.length}
+                      >
+                        <DownloadCloud className="h-5 w-5" />
+                        Download everything
+                      </button>
+                    </div>
+                  </>
                 ) : (
                   <div className="mt-8 space-y-5 text-center">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.3em] text-slate-400">
-                      Waiting for code
+                      {receiverLoading
+                        ? 'Checking code…'
+                        : receiverError ?? 'Waiting for code'}
                     </div>
                     <p className="text-lg font-semibold">
-                      Enter the 6-digit code from the sender to preview files.
+                      {receiverError
+                        ? 'This code was not found. Ask the sender for a new one.'
+                        : 'Enter the 6-digit code from the sender to preview files.'}
                     </p>
                   </div>
                 )}
