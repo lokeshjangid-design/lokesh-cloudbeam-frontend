@@ -110,27 +110,6 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (sessionStatus !== 'uploading') {
-      window.clearInterval(progressTimerRef.current);
-      return;
-    }
-
-    progressTimerRef.current = window.setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          window.clearInterval(progressTimerRef.current);
-          setSessionStatus('ready');
-          setShareLink(`${window.location.origin}/join/${generatedCode ?? ''}`);
-          return 100;
-        }
-        return prev + 4;
-      });
-    }, 180);
-
-    return () => window.clearInterval(progressTimerRef.current);
-  }, [sessionStatus, generatedCode]);
-
-  useEffect(() => {
     setDownloadReady(Boolean(receiverSession));
   }, [receiverSession]);
 
@@ -206,9 +185,14 @@ const App = () => {
     setCreatingSession(true);
     
     try {
-      // Step 1: Upload files
+      // Step 1: Upload files with real progress
       setSessionStatus('uploading');
-      const uploadResult = await uploadFiles(selectedFiles);
+      setProgress(0);
+      
+      const uploadResult = await uploadFiles(selectedFiles, (progress) => {
+        setProgress(progress);
+      });
+      
       setUploadResponse(uploadResult);
       
       // Step 2: Create session with uploaded files
@@ -221,6 +205,7 @@ const App = () => {
 
       setGeneratedCode(record.pin);
       setSessionStatus('ready');
+      setShareLink(`${window.location.origin}/receiver?pin=${record.pin}`);
     } catch (error) {
       setSessionError(error instanceof Error ? error.message : 'Failed to create session');
       setSessionStatus('idle');
@@ -809,15 +794,24 @@ const ToggleCard = ({
 const ProgressBar = ({ progress, status }: { progress: number; status: SessionStatus }) => (
   <div className="space-y-3">
     <div className="flex items-center justify-between text-sm text-slate-300">
-      <span>{status === 'ready' ? 'Upload complete' : 'Uploading files'}</span>
+      <span>
+        {status === 'ready' ? '✅ Upload complete' : 
+         status === 'uploading' ? `📤 Uploading files... ${progress}%` : 
+         '📁 Ready to upload'}
+      </span>
       <span>{progress}%</span>
     </div>
     <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
       <div
-        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all"
+        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-300"
         style={{ width: `${progress}%` }}
       />
     </div>
+    {status === 'uploading' && (
+      <p className="text-xs text-slate-400">
+        Large files may take longer to upload. Please keep this tab open.
+      </p>
+    )}
   </div>
 );
 
