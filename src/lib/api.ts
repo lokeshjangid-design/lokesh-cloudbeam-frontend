@@ -47,6 +47,19 @@ export async function uploadFiles(
   files: File[],
   onProgress?: (progress: number) => void
 ): Promise<UploadResponse> {
+  // If only one small file, use legacy method for simplicity
+  if (files.length === 1 && files[0].size < 50 * 1024 * 1024) {
+    return uploadFilesLegacy(files, onProgress);
+  }
+
+  // For multiple files or large files, use chunked upload
+  return uploadFilesChunked(files, onProgress);
+}
+
+async function uploadFilesLegacy(
+  files: File[],
+  onProgress?: (progress: number) => void
+): Promise<UploadResponse> {
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     files.forEach((file) => {
@@ -88,6 +101,97 @@ export async function uploadFiles(
     xhr.open('POST', `${API_BASE_URL}/api/upload`);
     xhr.send(formData);
   });
+}
+
+async function uploadFilesChunked(
+  files: File[],
+  onProgress?: (progress: number) => void
+): Promise<UploadResponse> {
+  const CHUNK_SIZE = 8 * 1024 * 1024; // 8MB
+  const CONCURRENT_CHUNKS = 3; // Upload 3 chunks at a time
+  let sessionId: string | null = null;
+  let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  let uploadedBytes = 0;
+
+  for (const file of files) {
+    // Initialize chunked upload
+    const initResponse = await fetch(`${API_BASE_URL}/api/upload/init`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+        sessionId: sessionId || undefined,
+      }),
+    });
+
+    if (!initResponse.ok) {
+      throw new Error('Failed to initialize upload');
+    }
+
+    const { uploadId, sessionId: newSessionId, totalChunks } = await initResponse.json();
+    sessionId = newSessionId;
+
+    // Create chunks
+    const chunks: Array<{ index: number; data: Blob }> = [];
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+      chunks.push({ index: i, data: chunk });
+    }
+
+    // Upload chunks with concurrency control
+    const uploadChunk = async (chunk: { index: number; data: Blob }) => {
+      const response = await fetch(`${API_BASE_URL}/api/upload/chunk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'X-Upload-Id': uploadId,
+          'X-Chunk-Index': chunk.index.toString(),
+        },
+        body: chunk.data,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to upload chunk ${chunk.index}`);
+      }
+
+      uploadedBytes += chunk.data.size;
+      const progress = Math.round((uploadedBytes / totalBytes) * 100);
+      onProgress?.(progress);
+
+      return response.json();
+    };
+
+    // Upload chunks in batches
+    for (let i = 0; i < chunks.length; i += CONCURRENT_CHUNKS) {
+      const batch = chunks.slice(i, i + CONCURRENT_CHUNKS);
+      await Promise.all(batch.map(uploadChunk));
+    }
+
+    // Complete upload
+    const completeResponse = await fetch(`${API_BASE_URL}/api/upload/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uploadId }),
+    });
+
+    if (!completeResponse.ok) {
+      throw new Error('Failed to complete upload');
+    }
+  }
+
+  return {
+    tempSessionId: sessionId!,
+    files: files.map((file, index) => ({
+      id: `${file.name}-${file.size}-${index}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    })),
+  };
 }
 
 export async function createSession(payload: CreateSessionPayload): Promise<SessionRecord> {

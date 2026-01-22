@@ -796,7 +796,7 @@ const ProgressBar = ({ progress, status }: { progress: number; status: SessionSt
     <div className="flex items-center justify-between text-sm text-slate-300">
       <span>
         {status === 'ready' ? '✅ Upload complete' : 
-         status === 'uploading' ? `📤 Uploading files... ${progress}%` : 
+         status === 'uploading' ? `🚀 Fast uploading... ${progress}%` : 
          '📁 Ready to upload'}
       </span>
       <span>{progress}%</span>
@@ -808,9 +808,14 @@ const ProgressBar = ({ progress, status }: { progress: number; status: SessionSt
       />
     </div>
     {status === 'uploading' && (
-      <p className="text-xs text-slate-400">
-        Large files may take longer to upload. Please keep this tab open.
-      </p>
+      <div className="space-y-1">
+        <p className="text-xs text-slate-400">
+          🚀 Using fast chunked upload for maximum speed
+        </p>
+        <p className="text-xs text-slate-400">
+          Large files are uploaded in parallel chunks for best performance
+        </p>
+      </div>
     )}
   </div>
 );
